@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:,">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Halay 🪢</title>
+<style>
+  :root { --w: 100px; --beat: .9s; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  body { background: radial-gradient(ellipse at 50% 20%, #7a1f2b 0%, #3b0f1c 55%, #1c0710 100%); color: #fff; }
+  body.overlay { background: transparent; }
+
+  /* üst başlık */
+  #title { position: fixed; top: 4.5vh; left: 0; right: 0; text-align: center; pointer-events: none; }
+  #title h1 { margin: 0; font-size: clamp(22px, 5vw, 54px); letter-spacing: .08em; text-shadow: 0 3px 0 #0006, 0 0 24px #ffb70388; }
+  #title p { margin: .3em 0 0; font-size: clamp(12px, 2vw, 22px); opacity: .9; }
+  body.overlay #title { display: none; }
+
+  /* durum çipi */
+  #chip { position: fixed; top: 8px; left: 8px; font-size: 12px; padding: 4px 10px; border-radius: 99px; background: #000a; z-index: 5; }
+  body.overlay:not(.debug) #chip { display: none; }
+  #chip.live { background: #1b7f3be0; }
+
+  /* sahne */
+  #floor { position: fixed; left: 0; right: 0; bottom: 0; height: 5vh; pointer-events: none;
+    background: repeating-linear-gradient(90deg, #c1121f 0 24px, #f4a261 24px 48px, #264653 48px 72px, #f4a261 72px 96px);
+    opacity: .85; border-top: 4px solid #ffd166; }
+  body.overlay #floor { display: none; }
+  #stage { position: fixed; left: 0; right: 0; bottom: 5vh; display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-end; padding: 0 2vw; }
+  body.overlay #stage { bottom: 2vh; }
+
+  .dancer { width: var(--w); margin: 0 calc(var(--w) * -.06); padding-bottom: calc(var(--w) * .22); position: relative; text-align: center; }
+  .dancer .body { animation: step var(--beat) ease-in-out infinite; animation-delay: var(--d, 0s); transform-origin: 50% 100%; }
+  .dancer svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .dancer .tag { margin: 2px auto 0; width: max-content; max-width: calc(var(--w) * 1.7); font-weight: 700;
+    font-size: clamp(10px, calc(var(--w) * .16), 22px); padding: .1em .55em; border-radius: 99px;
+    background: #000b; border: 1px solid #ffffff55; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dancer:nth-child(even) .tag { transform: translateY(.9em); }
+  .dancer.rose .tag { background: linear-gradient(90deg, #ffd166, #ff8fab); color: #3b0f1c; border-color: #fff; }
+  .dancer.rose::before { content: "🌹"; position: absolute; top: -.1em; left: 50%; transform: translateX(-50%); font-size: calc(var(--w) * .28); z-index: 2; animation: bob 1.2s ease-in-out infinite; }
+  .dancer.enter { animation: pop .55s cubic-bezier(.2, 1.5, .4, 1); }
+  .dancer.leaving { animation: out .5s ease-in forwards; }
+
+  .legL { transform-origin: 50px 104px; animation: kickL var(--beat) ease-in-out infinite; animation-delay: var(--d, 0s); }
+  .legR { transform-origin: 70px 104px; animation: kickR var(--beat) ease-in-out infinite; animation-delay: var(--d, 0s); }
+  .mendilg { display: none; }
+  .dancer.leader .mendilg { display: inline; }
+  .dancer.leader .armL { display: none; }
+  .cloth { transform-origin: 10px 34px; animation: wave .45s ease-in-out infinite alternate; }
+
+  @keyframes step {
+    0%, 100% { transform: translateY(0) rotate(-3deg); }
+    25%      { transform: translateY(-9%) rotate(0deg); }
+    50%      { transform: translateY(0) rotate(3deg); }
+    75%      { transform: translateY(-9%) rotate(0deg); }
+  }
+  @keyframes kickL { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-22deg); } 50% { transform: rotate(0); } 75% { transform: rotate(6deg); } }
+  @keyframes kickR { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(6deg); } 50% { transform: rotate(0); } 75% { transform: rotate(22deg); } }
+  @keyframes wave { from { transform: rotate(-16deg); } to { transform: rotate(16deg); } }
+  @keyframes pop { from { transform: translateY(60px) scale(.2); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes out { to { transform: translateY(-30px) scale(.4); opacity: 0; } }
+  @keyframes bob { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, -8px); } }
+
+  /* gül bildirimi */
+  #banner { position: fixed; top: 16vh; left: 50%; transform: translate(-50%, -20px); opacity: 0; pointer-events: none;
+    background: linear-gradient(90deg, #ffd166, #ff8fab); color: #3b0f1c; font-weight: 800; border-radius: 99px;
+    padding: .5em 1.2em; font-size: clamp(14px, 3.2vw, 34px); text-align: center; max-width: 94vw; box-shadow: 0 8px 30px #0008; z-index: 6; }
+  body.overlay #banner { top: 4vh; }
+  #banner.show { animation: banner 3.2s ease forwards; }
+  @keyframes banner { 0% { opacity: 0; transform: translate(-50%, -20px) scale(.8); } 10%, 85% { opacity: 1; transform: translate(-50%, 0) scale(1); } 100% { opacity: 0; transform: translate(-50%, -10px) scale(.95); } }
+  .petal { position: fixed; top: -40px; font-size: 28px; pointer-events: none; z-index: 5; animation: fall linear forwards; }
+  @keyframes fall { to { transform: translateY(110vh) rotate(360deg); } }
+
+  #hint { position: fixed; left: 0; right: 0; bottom: 14vh; text-align: center; font-size: clamp(14px, 2.4vw, 26px); opacity: .85; pointer-events: none; }
+  body.overlay #hint { display: none; }
+
+  /* test paneli */
+  #test { position: fixed; right: 8px; bottom: calc(5vh + 8px); z-index: 7; display: none; gap: 6px; flex-wrap: wrap; justify-content: flex-end; max-width: 60vw; }
+  body.test #test { display: flex; }
+  #test button { border: 0; border-radius: 10px; padding: 8px 12px; font-weight: 700; background: #ffd166; color: #3b0f1c; }
+</style>
+</head>
+<body>
+  <div id="chip">⏳ Bağlanıyor…</div>
+  <div id="title"><h1>🪢 HALAY BAŞLADI! 🪢</h1><p id="count"></p></div>
+  <div id="banner"></div>
+  <div id="hint">Yayına gir veya yorumlara <b>halay</b> yaz, halaya katıl! 💃🕺</div>
+  <div id="stage"></div>
+  <div id="floor"></div>
+  <div id="test">
+    <button data-t="member">+ Giriş</button>
+    <button data-t="rose1">🌹 1 Gül</button>
+    <button data-t="rose3">🌹🌹🌹 3 Gül</button>
+  </div>
+
+<script>
+(() => {
+  const qs = new URLSearchParams(location.search);
+  const OVERLAY = qs.get('overlay') === '1';
+  const LIFE = (Number(qs.get('life')) || 300) * 1000;  // halaycı kaç sn kalsın
+  document.body.classList.toggle('overlay', OVERLAY);
+  document.body.classList.toggle('test', qs.get('test') === '1');
+  document.body.classList.toggle('debug', qs.get('debug') === '1');
+  if (qs.get('hint') === '0') document.getElementById('hint').style.display = 'none';
+
+  const $stage = document.getElementById('stage');
+  const $count = document.getElementById('count');
+  const $banner = document.getElementById('banner');
+  const $chip = document.getElementById('chip');
+  const $hint = document.getElementById('hint');
+  const BEAT = 0.9;
+  document.documentElement.style.setProperty('--beat', BEAT + 's');
+
+  const SKIN = ['#f1c9a5', '#e0ac82', '#c68a5e', '#8d5a3b', '#f6d7bc'];
+  const HAIR = ['#1b1b1b', '#3b2416', '#5a3a22', '#8a5a2b', '#222'];
+  const SHIRT = ['#f8f9fa', '#e63946', '#2a9d8f', '#e9c46a', '#457b9d', '#f4a261', '#9d4edd'];
+  const VEST = ['#1d3557', '#7b2d26', '#264653', '#3a0ca3', '#6a040f'];
+  const PANTS = ['#111', '#1d2d44', '#2b2d42', '#3d2c1e'];
+  const pick = (a) => a[Math.floor(Math.random() * a.length)];
+
+  function svg(c) {
+    const head = c.style === 'cap'
+      ? `<path d="M39 28 Q60 4 81 28Z" fill="${c.vest}"/><rect x="36" y="26" width="30" height="6" rx="3" fill="${c.vest}"/>`
+      : c.style === 'scarf'
+        ? `<path d="M38 36 Q36 8 60 8 Q84 8 82 36 Q72 22 60 22 Q48 22 38 36Z" fill="#fff"/><circle cx="60" cy="12" r="3" fill="#e63946"/>`
+        : `<path d="M40 32 Q40 10 60 10 Q80 10 80 32 Q70 20 60 21 Q50 20 40 32Z" fill="${c.hair}"/>`;
+    return `<svg viewBox="0 0 120 170" aria-hidden="true">
+      <g class="legL"><rect x="44" y="104" width="12" height="52" rx="6" fill="${c.pants}"/><ellipse cx="49" cy="158" rx="11" ry="5" fill="#2b1b12"/></g>
+      <g class="legR"><rect x="64" y="104" width="12" height="52" rx="6" fill="${c.pants}"/><ellipse cx="71" cy="158" rx="11" ry="5" fill="#2b1b12"/></g>
+      <path class="armL" d="M-8 80 L62 80" stroke="${c.shirt}" stroke-width="11" stroke-linecap="round"/>
+      <path class="armR" d="M58 80 L128 80" stroke="${c.shirt}" stroke-width="11" stroke-linecap="round"/>
+      <circle cx="-8" cy="80" r="6" fill="${c.skin}" class="armL"/><circle cx="128" cy="80" r="6" fill="${c.skin}"/>
+      <rect x="34" y="52" width="52" height="58" rx="14" fill="${c.shirt}"/>
+      <rect x="34" y="52" width="17" height="58" rx="8" fill="${c.vest}"/><rect x="69" y="52" width="17" height="58" rx="8" fill="${c.vest}"/>
+      <rect x="34" y="96" width="52" height="9" fill="#d62828"/>
+      <circle cx="60" cy="34" r="20" fill="${c.skin}"/>
+      ${head}
+      <circle cx="53" cy="36" r="2.2" fill="#222"/><circle cx="67" cy="36" r="2.2" fill="#222"/>
+      <path d="M52 43 Q60 51 68 43" stroke="#7a2e2e" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+      <g class="mendilg">
+        <path d="M30 78 L10 36" stroke="${c.shirt}" stroke-width="11" stroke-linecap="round"/>
+        <circle cx="10" cy="34" r="6" fill="${c.skin}"/>
+        <g class="cloth"><path d="M10 34 q-18 -22 -34 -6 q4 26 28 22z" fill="#d62828"/>
+          <circle cx="-12" cy="30" r="2.4" fill="#fff"/><circle cx="-4" cy="40" r="2.4" fill="#fff"/><circle cx="-18" cy="40" r="2.2" fill="#fff"/></g>
+      </g>
+    </svg>`;
+  }
+
+  // ---------- ekran düzeni ----------
+  let capacity = 20;
+  function layout() {
+    const vw = innerWidth, vh = innerHeight;
+    const perRow = Math.max(4, Math.floor(vw / 100));
+    const W = Math.min(150, (vw * 0.96) / (perRow * 0.88 + 0.12));
+    const rowH = W * 1.9;
+    const rows = Math.max(1, Math.floor((vh * (OVERLAY ? 0.8 : 0.6)) / rowH));
+    capacity = Math.min(perRow * rows, 80);
+    document.documentElement.style.setProperty('--w', W.toFixed(1) + 'px');
+    markLeaders(); trim();
+  }
+  addEventListener('resize', layout);
+
+  function live() { return [...$stage.children].filter((e) => !e.classList.contains('leaving')); }
+
+  // her satırın en solundaki mendil sallayan halay başı olur
+  function markLeaders() {
+    let lastTop = null;
+    for (const el of live()) {
+      const top = el.offsetTop;
+      el.classList.toggle('leader', lastTop === null || Math.abs(top - lastTop) > 5);
+      lastTop = top;
+    }
+  }
+  function refresh() {
+    const n = live().length;
+    $count.textContent = n ? `Halayda ${n} kişi` : '';
+    $hint.style.opacity = n ? 0 : 0.85;
+    requestAnimationFrame(markLeaders);
+  }
+  function removeEl(el) {
+    if (el.classList.contains('leaving')) return;
+    el.classList.add('leaving');
+    setTimeout(() => { el.remove(); refresh(); }, 520);
+    refresh();
+  }
+  function trim() { const l = live(); for (let i = 0; i < l.length - capacity; i++) removeEl(l[i]); }
+
+  // ---------- halaycı ekleme ----------
+  const pool = []; // son gelenlerin isimleri (gül ekibi için)
+  function addDancer(name, rose) {
+    const el = document.createElement('div');
+    el.className = 'dancer enter' + (rose ? ' rose' : '');
+    const phase = (Date.now() / 1000) % BEAT;           // herkes aynı ritimde olsun
+    el.style.setProperty('--d', (-(phase) - Math.random() * 0.05).toFixed(3) + 's');
+    el.dataset.born = Date.now();
+    el.dataset.life = rose ? LIFE * 2 : LIFE;
+    const body = document.createElement('div');
+    body.className = 'body';
+    body.innerHTML = svg({ skin: pick(SKIN), hair: pick(HAIR), shirt: pick(SHIRT), vest: pick(VEST), pants: pick(PANTS),
+      style: pick(['hair', 'hair', 'cap', 'scarf']) });
+    const tag = document.createElement('div');
+    tag.className = 'tag';
+    tag.textContent = name;
+    el.append(body, tag);
+    $stage.appendChild(el);
+    setTimeout(() => el.classList.remove('enter'), 700);
+    trim(); refresh();
+  }
+
+  // sıra: dancer'lar tek tek, küçük aralıkla gelsin
+  const queue = [];
+  setInterval(() => {
+    const q = queue.shift();
+    if (q) addDancer(q.name, q.rose);
+  }, 230);
+  setInterval(() => {                                    // süresi dolanlar gider
+    const now = Date.now();
+    for (const el of live()) if (now - el.dataset.born > Number(el.dataset.life)) removeEl(el);
+  }, 4000);
+
+  function onJoin(name) {
+    name = String(name || 'Misafir').slice(0, 16);
+    pool.push(name); if (pool.length > 40) pool.shift();
+    queue.push({ name, rose: false });
+    if (queue.length > 200) queue.splice(0, queue.length - 200);
+  }
+
+  function showBanner(text) {
+    $banner.textContent = text;
+    $banner.classList.remove('show'); void $banner.offsetWidth; $banner.classList.add('show');
+    for (let i = 0; i < 14; i++) {
+      const p = document.createElement('div');
+      p.className = 'petal'; p.textContent = Math.random() < .7 ? '🌹' : '🌸';
+      p.style.left = Math.random() * 100 + 'vw';
+      p.style.animationDuration = 2.5 + Math.random() * 2.5 + 's';
+      p.style.animationDelay = Math.random() * 0.8 + 's';
+      document.body.appendChild(p);
+      setTimeout(() => p.remove(), 6500);
+    }
+  }
+
+  function onRose(name, dancers, roses) {
+    name = String(name || 'Gül Atan').slice(0, 16);
+    dancers = Math.max(1, Number(dancers) || 5);
+    showBanner(`🌹 ${name} gül attı! ${dancers} kişi halaya geldi`);
+    const others = pool.filter((n) => n !== name);
+    for (let i = 0; i < dancers; i++) {
+      let n = name;
+      if (i > 0) n = others.length ? others[Math.floor(Math.random() * others.length)] : name;
+      queue.push({ name: n + ' 🌹', rose: true });
+    }
+  }
+
+  // ---------- sunucu bağlantısı (otomatik yeniden bağlanır) ----------
+  let ws, retry = 1000;
+  function setChip(text, ok) { $chip.textContent = text; $chip.classList.toggle('live', !!ok); }
+  function connect() {
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    try { ws = new WebSocket(`${proto}://${location.host}/ws`); } catch { return setChip('🧪 Demo modu (sunucu yok)'); }
+    ws.onopen = () => { retry = 1000; setChip('⏳ Yayın bekleniyor'); };
+    ws.onmessage = (ev) => {
+      let m; try { m = JSON.parse(ev.data); } catch { return; }
+      if (m.type === 'join') onJoin(m.name);
+      else if (m.type === 'rose') onRose(m.name, m.dancers, m.roses);
+      else if (m.type === 'status') {
+        if (m.state === 'live') setChip('🔴 ' + (m.text || 'Yayında'), true);
+        else if (m.state === 'no-username') setChip('⚠️ TIKTOK_USERNAME ayarlı değil');
+        else setChip('⏳ ' + (m.text || 'Yayın bekleniyor'));
+      }
+    };
+    ws.onclose = () => { setChip('🔌 Yeniden bağlanıyor…'); setTimeout(connect, retry); retry = Math.min(retry * 1.5, 10000); };
+    ws.onerror = () => ws.close();
+  }
+
+  // ---------- test düğmeleri (?test=1) — sunucu olmadan da çalışır ----------
+  const FAKE = ['Ayşe', 'Mehmet', 'Zeynep', 'Can', 'Elif', 'Burak', 'Selin', 'Emre', 'Deniz', 'Kerem', 'Ece', 'Mert'];
+  document.getElementById('test').addEventListener('click', (e) => {
+    const t = e.target.dataset.t; if (!t) return;
+    if (t === 'member') onJoin(pick(FAKE));
+    if (t === 'rose1') onRose(pick(FAKE), 5, 1);
+    if (t === 'rose3') onRose(pick(FAKE), 15, 3);
+  });
+
+  layout(); refresh(); connect();
+})();
+</script>
+</body>
+</html>
